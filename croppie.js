@@ -169,7 +169,7 @@
             if (img.src === src) {// If image source hasn't changed resolve immediately
                 _resolve();
                 return;
-            } 
+            }
 
             img.exifdata = null;
             img.removeAttribute('crossOrigin');
@@ -180,7 +180,7 @@
                 if (doExif) {
                     EXIF.getData(img, function () {
                         _resolve();
-                    });    
+                    });
                 }
                 else {
                     _resolve();
@@ -540,7 +540,7 @@
                 self.options.viewport.width += deltaX;
                 css(self.elements.viewport, {
                     width: self.options.viewport.width + 'px'
-                }); 
+                });
             }
 
             _updateOverlay.call(self);
@@ -571,12 +571,37 @@
         this.elements.boundary.appendChild(wrap);
     }
 
+    function _applyEasingToZoomValue(zoomer) {
+      var val = parseFloat(zoomer.value),
+          min = parseFloat(zoomer.min),
+          max = parseFloat(zoomer.max);
+      return _calculateQuadraticEasingWithOffset(min, max, val);
+    }
+
+    function _calculateQuadraticEasingWithOffset(min, max, val) {
+      var A = .1,
+          c = (val - min) / (max - min);
+      // quadratic IN easing with offset A
+      return min + (Math.pow((A + (1 - A) * c), 2) - Math.pow(A, 2)) * (max - min);
+    }
+
+    function _invertQuadraticEasingWithOffset(min, max, val) {
+        var A = .1;
+        // inversion of quadratic IN easing with offset A
+        return min + (Math.sqrt(Math.pow(A, 2) + (val - min) / (max - min)) - A) * (max - min) / (1 - A);
+    }
+
     function _setZoomerVal(v) {
         if (this.options.enableZoom) {
             var z = this.elements.zoomer,
-                val = fix(v, 4);
+                val = fix(v, 4),
+                min = parseFloat(z.min),
+                max = parseFloat(z.max);
 
-            z.value = Math.max(z.min, Math.min(z.max, val));
+            val = Math.max(min, Math.min(max, val));
+
+            // Inverting easing function
+            z.value = _invertQuadraticEasingWithOffset(min, max, val);
         }
     }
 
@@ -599,7 +624,7 @@
 
         function change() {
             _onZoom.call(self, {
-                value: parseFloat(zoomer.value),
+                value: _applyEasingToZoomValue(zoomer),
                 origin: new TransformOrigin(self.elements.preview),
                 viewportRect: self.elements.viewport.getBoundingClientRect(),
                 transform: Transform.parse(self.elements.preview)
@@ -943,7 +968,7 @@
 
         self.options.update.call(self, data);
         if (self.$ && typeof Prototype == 'undefined') {
-            self.$(self.element).trigger('update', data); 
+            self.$(self.element).trigger('update', data);
         }
         else {
             var ev;
@@ -1101,7 +1126,7 @@
         if (exif && !customOrientation) {
             var orientation = getExifOrientation(img);
             drawCanvas(canvas, img, num(orientation || 0, 10));
-        } 
+        }
         else if (customOrientation) {
             drawCanvas(canvas, img, customOrientation);
         }
@@ -1268,7 +1293,7 @@
                 var y1 = y0 + height;
 
                 self.data.points = [x0, y0, x1, y1];
-            } 
+            }
             else if (self.options.relative) {
                 points = [
                     points[0] * img.naturalWidth / 100,
