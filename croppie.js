@@ -177,7 +177,7 @@
     /* Utilities */
     function loadImage(src, doExif) {
         if (!src) { throw 'Source image missing'; }
-        
+
         var img = new Image();
         img.style.opacity = '0';
         return new Promise(function (resolve, reject) {
@@ -599,12 +599,37 @@
         this.elements.boundary.appendChild(wrap);
     }
 
+    function _applyEasingToZoomValue(zoomer) {
+      var val = parseFloat(zoomer.value),
+          min = parseFloat(zoomer.min),
+          max = parseFloat(zoomer.max);
+      return _calculateQuadraticEasingWithOffset(min, max, val);
+    }
+
+    function _calculateQuadraticEasingWithOffset(min, max, val) {
+      var A = .1,
+          c = (val - min) / (max - min);
+      // quadratic IN easing with offset A
+      return min + (Math.pow((A + (1 - A) * c), 2) - Math.pow(A, 2)) * (max - min);
+    }
+
+    function _invertQuadraticEasingWithOffset(min, max, val) {
+        var A = .1;
+        // inversion of quadratic IN easing with offset A
+        return min + (Math.sqrt(Math.pow(A, 2) + (val - min) / (max - min)) - A) * (max - min) / (1 - A);
+    }
+
     function _setZoomerVal(v) {
         if (this.options.enableZoom) {
             var z = this.elements.zoomer,
-                val = fix(v, 4);
+                val = fix(v, 4),
+                min = parseFloat(z.min),
+                max = parseFloat(z.max);
 
-            z.value = Math.max(parseFloat(z.min), Math.min(parseFloat(z.max), val)).toString();
+            val = Math.max(min, Math.min(max, val));
+
+            // Inverting easing function
+            z.value = _invertQuadraticEasingWithOffset(min, max, val);
         }
     }
 
@@ -628,7 +653,7 @@
 
         function change() {
             _onZoom.call(self, {
-                value: parseFloat(zoomer.value),
+                value: _applyEasingToZoomValue(zoomer),
                 origin: new TransformOrigin(self.elements.preview),
                 viewportRect: self.elements.viewport.getBoundingClientRect(),
                 transform: Transform.parse(self.elements.preview)
